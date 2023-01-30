@@ -9,6 +9,11 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// struct to bind POST data
+type postPass struct {
+	Pass string `json:"pass"`
+}
+
 // check if password is valid according to given format
 // 1<= len(password) <=40
 // character is letter,digit,".","!"
@@ -17,7 +22,7 @@ func isValid(password string) bool {
 		return false
 	}
 	for _, char := range password {
-		if !(('a' < char && char < 'z') || ('A' < char && char < 'Z') || ('0' < char && char < '9') || (char == '!') || (char == '.')) {
+		if !(('a' <= char && char <= 'z') || ('A' <= char && char <= 'Z') || ('0' <= char && char <= '9') || (char == '!') || (char == '.')) {
 			return false
 		}
 	}
@@ -133,19 +138,10 @@ func minStep(password string) int {
 	}
 }
 
-// JSON POST receive
-// password/dbname need to change
-const (
-	host     = "localhost"
-	port     = 5432
-	user     = "postgres"
-	password = ""
-	dbname   = "agnos_assign"
-)
-
 func main() {
 	// connect database
-	db, err := sql.Open("postgres", "user=postgres password=qduZ9Cg2D.gWU.m dbname=agnos_assign sslmode=disable")
+	// password/dbname need to change
+	db, err := sql.Open("postgres", "user=postgres password=?? dbname=agnos_assign sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
@@ -173,9 +169,10 @@ func main() {
 	// GET requset for calculate minStep
 	router.POST("/minStep", func(c *gin.Context) {
 		// receive params from request
-		password := c.PostForm("pass")
+		var password postPass
+		c.BindJSON(&password)
 		// Check is password is in desired format (according to requirement)
-		if !isValid(password) {
+		if !isValid(password.Pass) {
 			c.JSON(400, gin.H{
 				"status":  "fail",
 				"message": "password is in a wrong format",
@@ -185,7 +182,7 @@ func main() {
 				"status":  "success",
 				"message": "The request was successful",
 				"data": gin.H{
-					"minStep": minStep(password),
+					"minStep": minStep(password.Pass),
 				},
 			})
 		}
