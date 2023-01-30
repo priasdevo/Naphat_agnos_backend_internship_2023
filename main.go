@@ -1,9 +1,12 @@
 package main
 
 import (
+	"database/sql"
 	"sort"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	_ "github.com/lib/pq"
 )
 
 // check if password is valid according to given format
@@ -130,20 +133,63 @@ func minStep(password string) int {
 	}
 }
 
+// JSON POST receive
+// password/dbname need to change
+const (
+	host     = "localhost"
+	port     = 5432
+	user     = "postgres"
+	password = ""
+	dbname   = "agnos_assign"
+)
+
 func main() {
+	// connect database
+	db, err := sql.Open("postgres", "user=postgres password=qduZ9Cg2D.gWU.m dbname=agnos_assign sslmode=disable")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
 	// init router
 	router := gin.Default()
 
-	router.GET("/minStep/:pass", func(c *gin.Context) {
-		password := c.Param("pass")
-		if !isValid(password) {
-			c.JSON(400, "password is in a wrong format")
-		} else {
-			c.JSON(200, minStep(password))
-		}
+	// Log to psql
+	router.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
+		status := param.StatusCode
+		latency := param.Latency.String()
+		clientIP := param.ClientIP
+		method := param.Method
+		path := param.Path
 
+		_, err := db.Exec("INSERT INTO logs (time, status, latency, client_ip, method, path) VALUES ($1, $2, $3, $4, $5, $6)",
+			time.Now(), status, latency, clientIP, method, path)
+		if err != nil {
+			panic(err)
+		}
+		return ""
+	}))
+
+	// GET requset for calculate minStep
+	router.POST("/minStep", func(c *gin.Context) {
+		// receive params from request
+		password := c.PostForm("pass")
+		// Check is password is in desired format (according to requirement)
+		if !isValid(password) {
+			c.JSON(400, gin.H{
+				"status":  "fail",
+				"message": "password is in a wrong format",
+			})
+		} else { // password is in correct format calculate min step to Strong password
+			c.JSON(200, gin.H{
+				"status":  "success",
+				"message": "The request was successful",
+				"data": gin.H{
+					"minStep": minStep(password),
+				},
+			})
+		}
 	})
-	//fmt.Println(minStep("WsmmmmmtMqqqtjKtzwSjerqw"))
 
 	// start router
 	router.Run("localhost:8080")
