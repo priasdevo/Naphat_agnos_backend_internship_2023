@@ -12,5 +12,6 @@ How to deploy locally
         path TEXT NOT NULL
     );
 4. At the root folder run "go run main.go"
+
 How to run unit test
 1. At the root folder run "go test"
