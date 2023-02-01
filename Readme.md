@@ -1,6 +1,8 @@
 How to deploy locally
 1. Clone the repository
 2. Change the user, password, dbname of postgres to correct local protgres database
+    At line 144 in main.go
+    db, err := sql.Open("postgres", "user=postgres password=?? dbname=agnos_assign sslmode=disable")
 3. Create the table in database with following command
     CREATE TABLE logs (
         id SERIAL PRIMARY KEY,
